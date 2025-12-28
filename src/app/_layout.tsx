@@ -20,10 +20,8 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === "(tabs)";
 
     if (!userId && inAuthGroup) {
-      // Redirecionar para login se não estiver autenticado
       router.replace("/login");
     } else if (userId && !inAuthGroup) {
-      // Redirecionar para tabs se já estiver autenticado
       router.replace("/(tabs)");
     }
   }, [userId, segments, isLoading]);

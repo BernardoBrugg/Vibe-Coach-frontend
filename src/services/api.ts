@@ -1,8 +1,6 @@
 import axios from "axios";
 import { User, Transaction, Goal, ChatMessage, ChatResponse } from "../types";
 
-// Use o IP da sua máquina na rede local ao invés de localhost
-// Para desenvolvimento local com Expo Go, precisamos usar o IP da máquina
 const API_BASE_URL = "http://192.168.0.11:5010";
 
 const api = axios.create({
@@ -10,10 +8,9 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // 60 segundos de timeout
+  timeout: 60000,
 });
 
-// Adicionar interceptor para debug
 api.interceptors.request.use(
   (config) => {
     console.log("🚀 API Request:", config.method?.toUpperCase(), config.url);
@@ -33,14 +30,12 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      // Servidor respondeu com erro
       console.error(
         "❌ Response Error:",
         error.response.status,
         error.response.data
       );
     } else if (error.request) {
-      // Requisição foi feita mas sem resposta
       console.error("❌ No Response - API pode estar offline ou IP incorreto");
       console.error("❌ Tentando conectar em:", API_BASE_URL);
     } else {
@@ -50,7 +45,6 @@ api.interceptors.response.use(
   }
 );
 
-// Users
 export const getAllUsers = async (): Promise<User[]> => {
   const response = await api.get("/users");
   return response.data;
@@ -79,7 +73,6 @@ export const updateUser = async (
   return response.data;
 };
 
-// Transactions
 export const createTransaction = async (data: {
   userId: string;
   title: string;
@@ -114,7 +107,6 @@ export const deleteTransaction = async (
   await api.delete(`/transactions/${transactionId}`);
 };
 
-// Goals
 export const createGoal = async (data: {
   userId: string;
   title: string;
@@ -129,7 +121,6 @@ export const getGoals = async (): Promise<Goal[]> => {
   return response.data;
 };
 
-// Chat
 export const sendChatMessage = async (
   data: ChatMessage
 ): Promise<ChatResponse> => {
