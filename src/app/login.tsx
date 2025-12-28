@@ -61,7 +61,6 @@ export default function LoginScreen() {
     <View className="flex-1 bg-zinc-900">
       <ScrollView className="flex-1">
         <View className="p-6">
-          {/* Header */}
           <View className="items-center mt-12 mb-8">
             <View className="w-24 h-24 bg-violet-600 rounded-full items-center justify-center mb-6">
               <Ionicons name="chatbubble-ellipses" size={48} color="#ffffff" />
@@ -74,7 +73,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Users List */}
           {users.length === 0 ? (
             <View className="bg-zinc-800 rounded-2xl p-8 items-center">
               <Ionicons name="person-outline" size={48} color="#71717a" />

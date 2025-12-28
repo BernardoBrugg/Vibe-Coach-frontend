@@ -15,6 +15,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useMutation } from "@tanstack/react-query";
 import { sendChatMessage } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useHeaderHeight } from "@react-navigation/elements";
+import Markdown from "react-native-markdown-display";
 
 interface Message {
   id: string;
@@ -24,6 +26,7 @@ interface Message {
 }
 
 export default function ChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { userId, isLoading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -98,7 +101,6 @@ export default function ChatScreen() {
     setMessages((prev) => [userMessage, ...prev]);
     setInputText("");
 
-    // Scroll para o topo após enviar mensagem
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }, 100);
@@ -109,7 +111,6 @@ export default function ChatScreen() {
     });
   };
 
-  // Mostra loading apenas enquanto está carregando o auth
   if (authLoading) {
     return (
       <View className="flex-1 bg-zinc-900 items-center justify-center">
@@ -136,9 +137,9 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
       className="flex-1 bg-zinc-900"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={headerHeight}
     >
       <View className="flex-1">
         <ScrollView
@@ -158,17 +159,39 @@ export default function ChatScreen() {
               className={`mb-3 ${message.isUser ? "items-end" : "items-start"}`}
             >
               <View
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                   message.isUser ? "bg-violet-600" : "bg-zinc-800"
                 }`}
               >
-                <Text
-                  className={`text-base ${
-                    message.isUser ? "text-white" : "text-zinc-100"
-                  }`}
+                <Markdown
+                  style={{
+                    body: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 16,
+                    },
+                    heading1: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 24,
+                      fontWeight: "bold",
+                      marginBottom: 10,
+                    },
+                    heading2: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 20,
+                      fontWeight: "bold",
+                      marginBottom: 8,
+                    },
+                    strong: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontWeight: "bold",
+                    },
+                    paragraph: {
+                      marginBottom: 10,
+                    },
+                  }}
                 >
                   {message.text}
-                </Text>
+                </Markdown>
               </View>
               <Text className="text-zinc-500 text-xs mt-1 px-2">
                 {message.timestamp.toLocaleTimeString("pt-BR", {

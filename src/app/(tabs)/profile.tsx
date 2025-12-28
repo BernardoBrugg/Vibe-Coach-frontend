@@ -61,7 +61,6 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* Income & Expenses */}
         <View className="flex-row gap-4 mb-6">
           <View className="flex-1 bg-zinc-800 rounded-2xl p-4">
             <View className="flex-row items-center mb-2">
@@ -84,7 +83,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Quick Stats */}
         <View className="bg-zinc-800 rounded-2xl p-6">
           <Text className="text-zinc-100 text-lg font-bold mb-4">
             Informações da Conta
