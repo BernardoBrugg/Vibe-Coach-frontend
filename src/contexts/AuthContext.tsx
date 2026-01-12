@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { getUserId, saveUserId, clearUserId } from "../services/auth";
+import { getUserId, saveUserId, clearUserId, saveToken, clearToken } from "../services/auth";
+import { User } from "../types";
 
 interface AuthContextData {
   userId: string | null;
   isLoading: boolean;
   login: (userId: string) => Promise<void>;
+  signIn: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,13 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUserId(newUserId);
   };
 
+  const signIn = async (token: string, user: User) => {
+    await saveToken(token);
+    await saveUserId(user.id);
+    setUserId(user.id);
+  };
+
   const logout = async () => {
     await clearUserId();
+    await clearToken();
     setUserId(null);
   };
 
   return (
-    <AuthContext.Provider value={{ userId, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ userId, isLoading, login, signIn, logout }}>
       {children}
     </AuthContext.Provider>
   );

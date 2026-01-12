@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { sendChatMessage, getUser, getTransactions } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ interface Message {
 export default function ChatScreen() {
   const headerHeight = useHeaderHeight();
   const { userId, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   
 
   const { data: userProfile } = useQuery({
@@ -156,6 +158,12 @@ export default function ChatScreen() {
         <Text className="text-zinc-400 text-center mt-2">
           Por favor, faça login primeiro
         </Text>
+        <TouchableOpacity
+          className="mt-6 bg-violet-600 px-8 py-3 rounded-xl"
+          onPress={() => router.replace("/login")}
+        >
+          <Text className="text-white font-bold text-lg">Fazer Login</Text>
+        </TouchableOpacity>
       </View>
     );
   }

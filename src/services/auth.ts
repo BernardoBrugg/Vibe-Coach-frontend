@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from 'expo-secure-store';
 
 const USER_ID_KEY = "@vibe_coach:user_id";
 
@@ -25,6 +26,35 @@ export const clearUserId = async (): Promise<void> => {
     await AsyncStorage.removeItem(USER_ID_KEY);
   } catch (error) {
     console.error("Error clearing user ID:", error);
+    throw error;
+  }
+};
+
+const TOKEN_KEY = 'vibe_coach_token';
+
+export const saveToken = async (token: string): Promise<void> => {
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch (error) {
+    console.error("Error saving token:", error);
+    throw error;
+  }
+};
+
+export const getToken = async (): Promise<string | null> => {
+  try {
+    return await SecureStore.getItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.error("Error getting token:", error);
+    return null;
+  }
+};
+
+export const clearToken = async (): Promise<void> => {
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.error("Error clearing token:", error);
     throw error;
   }
 };

@@ -1,20 +1,72 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+import { makeRedirectUri } from "expo-auth-session";
+import { useMutation } from "@tanstack/react-query";
+
 import { useAllUsers } from "../hooks/useAllUsers";
 import { useAuth } from "../contexts/AuthContext";
+import { googleLogin } from "../services/api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { users, isLoading, error, refetch } = useAllUsers();
-  const { login } = useAuth();
+  const { login, signIn } = useAuth();
   const router = useRouter();
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+
+  const googleLoginMutation = useMutation({
+    mutationFn: googleLogin,
+    onSuccess: async (data) => {
+      if (data.isNewUser) {
+        // New User -> Go to Profile completion
+        router.push({
+          pathname: "/complete-profile",
+          params: { email: data.email, name: data.name },
+        });
+      } else if (data.token && data.user) {
+        // Existing User -> Login direct
+        await signIn(data.token, data.user);
+        router.replace("/(tabs)");
+      }
+    },
+    onError: (err) => {
+      console.error("Google Auth API Error:", err);
+      // For demo purposes while backend is being built by user:
+      // Alert.alert("Dev Note", "Backend not reachable. Simulating new user flow.");
+      // router.push({
+      //   pathname: "/complete-profile",
+      //   params: { email: "test@gmail.com", name: "Test User" },
+      // });
+       Alert.alert("Erro", "Falha ao autenticar com Google no backend.");
+    },
+  });
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        // Exchange token with backend
+        googleLoginMutation.mutate(authentication.accessToken);
+      }
+    }
+  }, [response]);
 
   const handleSelectUser = async (userId: string) => {
     try {
@@ -34,28 +86,8 @@ export default function LoginScreen() {
     );
   }
 
-  if (error) {
-    return (
-      <View className="flex-1 bg-zinc-900 items-center justify-center p-6">
-        <Ionicons name="alert-circle" size={64} color="#ef4444" />
-        <Text className="text-red-500 text-center mt-4 text-lg">
-          Erro ao carregar usuários
-        </Text>
-        <Text className="text-zinc-500 text-center mt-2">
-          Verifique se a API está rodando em http://192.168.0.11:5010
-        </Text>
-        <Text className="text-zinc-500 text-center mt-2 text-xs">
-          Certifique-se de que seu celular e computador estão na mesma rede Wi-Fi
-        </Text>
-        <TouchableOpacity
-          className="mt-6 bg-violet-600 px-8 py-4 rounded-xl"
-          onPress={() => refetch()}
-        >
-          <Text className="text-white font-bold text-lg">Tentar Novamente</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  // Removed blocking error state to allow Google Login even if /users fails
+  // if (error) { ... }
 
   return (
     <View className="flex-1 bg-zinc-900">
@@ -69,11 +101,45 @@ export default function LoginScreen() {
               Vibe Coach
             </Text>
             <Text className="text-zinc-400 text-center">
-              Selecione um usuário para continuar
+              Faça login para continuar
             </Text>
           </View>
 
-          {users.length === 0 ? (
+          {/* Google Button */}
+          <TouchableOpacity
+            className="flex-row items-center justify-center bg-white p-4 rounded-xl mb-8"
+              onPress={() => {
+               promptAsync(); 
+            }}
+          >
+            <Ionicons name="logo-google" size={24} color="#000" />
+            <Text className="text-black font-bold text-lg ml-3">
+              Entrar com Google
+            </Text>
+          </TouchableOpacity>
+
+          <View className="flex-row items-center mb-8">
+            <View className="flex-1 h-px bg-zinc-800" />
+            <Text className="text-zinc-500 mx-4">OU</Text>
+            <View className="flex-1 h-px bg-zinc-800" />
+          </View>
+
+          <Text className="text-zinc-400 mb-4 font-bold">Usuários Locais (Dev)</Text>
+
+          {error ? (
+             <View className="bg-zinc-800 rounded-2xl p-6 items-center border border-red-500/20">
+               <Ionicons name="lock-closed-outline" size={32} color="#ef4444" />
+               <Text className="text-red-400 mt-2 text-center font-bold">
+                 Acesso Restrito
+               </Text>
+               <Text className="text-zinc-500 text-sm mt-1 text-center">
+                 A listagem de usuários requer autenticação.
+               </Text>
+               <Text className="text-zinc-600 text-xs mt-2 text-center">
+                 (Error: 401 Unauthorized)
+               </Text>
+             </View>
+          ) : users.length === 0 ? (
             <View className="bg-zinc-800 rounded-2xl p-8 items-center">
               <Ionicons name="person-outline" size={48} color="#71717a" />
               <Text className="text-zinc-400 mt-4 text-center">

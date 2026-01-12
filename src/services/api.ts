@@ -1,7 +1,37 @@
 import axios from "axios";
-import { User, Transaction, Goal, ChatMessage, ChatResponse } from "../types";
+import { User, Transaction, Goal, ChatMessage, AuthResponse, GoogleAuthResponse } from "../types";
+import { getToken } from "./auth";
+import Constants from "expo-constants";
 
-const API_BASE_URL = "http://192.168.0.11:5010";
+// Helper to determine the correct URL automatically
+// Helper to determine the correct URL automatically
+const getBaseUrl = () => {
+  // 1. If explicit env var is set, verify if it's usable.
+  // We prioritize the dynamic config unless the user REALLY wants to force it.
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    console.log("⚠️ Using API URL from .env:", process.env.EXPO_PUBLIC_API_BASE_URL);
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  
+  // 2. Dynamic detection via Expo Constants
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  const localhost = debuggerHost?.split(":")[0];
+  
+  if (!localhost) {
+    // Fallback for simulators if not found
+    console.log("⚠️ Could not detect localhost IP, falling back to Android Emulator default: http://10.0.2.2:5010");
+    return "http://10.0.2.2:5010"; 
+  }
+  
+  // Use the IP address of the machine running the Expo server
+  const dynamicUrl = `http://${localhost}:5010`;
+  console.log("✅ Detected Dynamic API URL:", dynamicUrl);
+  return dynamicUrl;
+};
+
+const API_BASE_URL = getBaseUrl();
+
+console.log("🚀 API_BASE_URL initialized as:", API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,9 +42,21 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     console.log("🚀 API Request:", config.method?.toUpperCase(), config.url);
-    console.log("🚀 Full URL:", `${config.baseURL}${config.url}`);
+    
+    const token = await getToken();
+    if (token) {
+      console.log("🔑 Attaching Token:", token.substring(0, 10) + "...");
+      config.headers.Authorization = `Bearer ${token}`; // Axios 1.x supports direct assignment, but let's be explicit if needed
+      // Note: In newer Axios versions, headers is an AxiosHeaders object.
+      // config.headers.set('Authorization', `Bearer ${token}`); 
+    } else {
+      console.log("⚠️ No token found in SecureStore");
+    }
+    
+    console.log("📨 Final Headers:", JSON.stringify(config.headers));
+
     return config;
   },
   (error) => {
@@ -123,8 +165,24 @@ export const getGoals = async (): Promise<Goal[]> => {
 
 export const sendChatMessage = async (
   data: ChatMessage
-): Promise<ChatResponse> => {
+): Promise<any> => { // Changed from ChatResponse to any based on the instruction's implied removal
   const response = await api.post("/chat", data);
+  return response.data;
+};
+
+// Auth
+export const googleLogin = async (token: string): Promise<GoogleAuthResponse> => {
+  const response = await api.post("/auth/google", { token });
+  return response.data;
+};
+
+export const registerUser = async (data: {
+  email: string;
+  name: string;
+  monthlyIncome: number;
+  fixedExpenses: number;
+}): Promise<AuthResponse> => {
+  const response = await api.post("/auth/register", data);
   return response.data;
 };
 

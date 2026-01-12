@@ -12,9 +12,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  currentBalance: string;
-  monthlyIncome?: string;
-  fixedExpenses?: string;
+  currentBalance: number;
+  monthlyIncome?: number;
+  fixedExpenses?: number;
 }
 
 export interface Transaction {
@@ -41,6 +41,16 @@ export interface ChatMessage {
   message: string;
 }
 
-export interface ChatResponse {
-  response: string;
+export interface GoogleAuthResponse {
+  token: string | null;
+  user?: User;
+  email?: string;
+  name?: string;
+  photo?: string;
+  isNewUser?: boolean;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }
