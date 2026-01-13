@@ -57,7 +57,7 @@ export default function ProfileScreen() {
         <View className="bg-zinc-800 rounded-2xl p-6 mb-6">
           <Text className="text-zinc-400 text-sm mb-2">Saldo Atual</Text>
           <Text className="text-zinc-100 text-4xl font-bold">
-            R$ {parseFloat(user?.currentBalance || "0").toFixed(2)}
+            R$ {(user?.currentBalance || 0).toFixed(2)}
           </Text>
         </View>
 
@@ -68,7 +68,7 @@ export default function ProfileScreen() {
               <Text className="text-zinc-400 text-sm ml-2">Renda Mensal</Text>
             </View>
             <Text className="text-zinc-100 text-xl font-bold">
-              R$ {parseFloat(user?.monthlyIncome || "0").toFixed(2)}
+              R$ {(user?.monthlyIncome || 0).toFixed(2)}
             </Text>
           </View>
 
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
               <Text className="text-zinc-400 text-sm ml-2">Despesas Fixas</Text>
             </View>
             <Text className="text-zinc-100 text-xl font-bold">
-              R$ {parseFloat(user?.fixedExpenses || "0").toFixed(2)}
+              R$ {(user?.fixedExpenses || 0).toFixed(2)}
             </Text>
           </View>
         </View>

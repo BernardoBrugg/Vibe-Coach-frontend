@@ -20,7 +20,7 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === "(tabs)";
 
     if (!userId && inAuthGroup) {
-      router.replace("/login");
+      router.replace("/welcome");
     } else if (userId && !inAuthGroup) {
       router.replace("/(tabs)");
     }
