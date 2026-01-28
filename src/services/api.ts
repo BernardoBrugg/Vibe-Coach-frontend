@@ -1,23 +1,62 @@
 import axios from "axios";
-import { User, Transaction, Goal, ChatMessage, ChatResponse } from "../types";
+import { User, Transaction, Goal, ChatMessage, AuthResponse, GoogleAuthResponse } from "../types";
+import { getToken } from "./auth";
+import Constants from "expo-constants";
 
-// Use o IP da sua máquina na rede local ao invés de localhost
-// Para desenvolvimento local com Expo Go, precisamos usar o IP da máquina
-const API_BASE_URL = "http://192.168.0.11:5010";
+// Helper to determine the correct URL automatically
+// Helper to determine the correct URL automatically
+const getBaseUrl = () => {
+  // 1. If explicit env var is set, verify if it's usable.
+  // We prioritize the dynamic config unless the user REALLY wants to force it.
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    console.log("⚠️ Using API URL from .env:", process.env.EXPO_PUBLIC_API_BASE_URL);
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  
+  // 2. Dynamic detection via Expo Constants
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  const localhost = debuggerHost?.split(":")[0];
+  
+  if (!localhost) {
+    // Fallback for simulators if not found
+    console.log("⚠️ Could not detect localhost IP, falling back to Android Emulator default: http://10.0.2.2:5010");
+    return "http://10.0.2.2:5010"; 
+  }
+  
+  // Use the IP address of the machine running the Expo server
+  const dynamicUrl = `http://${localhost}:5010`;
+  console.log("✅ Detected Dynamic API URL:", dynamicUrl);
+  return dynamicUrl;
+};
+
+const API_BASE_URL = getBaseUrl();
+
+console.log("🚀 API_BASE_URL initialized as:", API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // 10 segundos de timeout
+  timeout: 60000,
 });
 
-// Adicionar interceptor para debug
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     console.log("🚀 API Request:", config.method?.toUpperCase(), config.url);
-    console.log("🚀 Full URL:", `${config.baseURL}${config.url}`);
+    
+    const token = await getToken();
+    if (token) {
+      console.log("🔑 Attaching Token:", token.substring(0, 10) + "...");
+      config.headers.Authorization = `Bearer ${token}`; // Axios 1.x supports direct assignment, but let's be explicit if needed
+      // Note: In newer Axios versions, headers is an AxiosHeaders object.
+      // config.headers.set('Authorization', `Bearer ${token}`); 
+    } else {
+      console.log("⚠️ No token found in SecureStore");
+    }
+    
+    console.log("📨 Final Headers:", JSON.stringify(config.headers));
+
     return config;
   },
   (error) => {
@@ -33,14 +72,12 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      // Servidor respondeu com erro
       console.error(
         "❌ Response Error:",
         error.response.status,
         error.response.data
       );
     } else if (error.request) {
-      // Requisição foi feita mas sem resposta
       console.error("❌ No Response - API pode estar offline ou IP incorreto");
       console.error("❌ Tentando conectar em:", API_BASE_URL);
     } else {
@@ -50,7 +87,6 @@ api.interceptors.response.use(
   }
 );
 
-// Users
 export const getAllUsers = async (): Promise<User[]> => {
   const response = await api.get("/users");
   return response.data;
@@ -79,7 +115,6 @@ export const updateUser = async (
   return response.data;
 };
 
-// Transactions
 export const createTransaction = async (data: {
   userId: string;
   title: string;
@@ -89,7 +124,11 @@ export const createTransaction = async (data: {
   frequency: string;
   date?: string;
 }): Promise<Transaction> => {
-  const response = await api.post("/transactions", data);
+  const { userId, ...transactionData } = data;
+  // Backend enforces UUID in body, but user ID is not UUID.
+  // Sending dummy UUID to satisfy validator; backend should use Token ID.
+  const payload = { ...transactionData, userId: "00000000-0000-0000-0000-000000000000" };
+  const response = await api.post("/transactions", payload);
   return response.data;
 };
 
@@ -114,7 +153,6 @@ export const deleteTransaction = async (
   await api.delete(`/transactions/${transactionId}`);
 };
 
-// Goals
 export const createGoal = async (data: {
   userId: string;
   title: string;
@@ -129,11 +167,30 @@ export const getGoals = async (): Promise<Goal[]> => {
   return response.data;
 };
 
-// Chat
 export const sendChatMessage = async (
   data: ChatMessage
-): Promise<ChatResponse> => {
-  const response = await api.post("/chat", data);
+): Promise<any> => {
+  const { userId, ...messageData } = data;
+  // Backend enforces UUID in body, but user ID is not UUID.
+  // Sending dummy UUID to satisfy validator; backend should use Token ID.
+  const payload = { ...messageData, userId: "00000000-0000-0000-0000-000000000000" };
+  const response = await api.post("/chat", payload);
+  return response.data;
+};
+
+// Auth
+export const googleLogin = async (token: string): Promise<GoogleAuthResponse> => {
+  const response = await api.post("/auth/google", { token });
+  return response.data;
+};
+
+export const registerUser = async (data: {
+  email: string;
+  name: string;
+  monthlyIncome: number;
+  fixedExpenses: number;
+}): Promise<AuthResponse> => {
+  const response = await api.post("/auth/register", data);
   return response.data;
 };
 

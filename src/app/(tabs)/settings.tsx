@@ -103,7 +103,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Account */}
         <View className="mb-8">
           <Text className="text-zinc-100 text-xl font-bold mb-4">Conta</Text>
 
@@ -177,7 +176,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Logout */}
         <TouchableOpacity
           className="bg-red-600 rounded-xl p-4 items-center"
           onPress={handleLogout}
@@ -188,7 +186,6 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Version */}
         <Text className="text-zinc-500 text-center mt-8">
           Vibe Coach v1.0.0
         </Text>

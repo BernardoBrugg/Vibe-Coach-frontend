@@ -12,9 +12,12 @@ import {
   Alert,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
-import { useMutation } from "@tanstack/react-query";
-import { sendChatMessage } from "../../services/api";
+import { useRouter } from "expo-router";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { sendChatMessage, getUser, getTransactions } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useHeaderHeight } from "@react-navigation/elements";
+import Markdown from "react-native-markdown-display";
 
 interface Message {
   id: string;
@@ -24,11 +27,27 @@ interface Message {
 }
 
 export default function ChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { userId, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  
+
+  const { data: userProfile } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: () => getUser(userId!),
+    enabled: !!userId,
+  });
+
+  const { data: transactions } = useQuery({
+    queryKey: ["transactions", userId],
+    queryFn: () => getTransactions(userId!),
+    enabled: !!userId,
+  });
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Olá! Sou o Vibe Coach, seu assistente financeiro pessoal. Como posso ajudá-lo hoje?",
+      text: "Olá! Sou o Vibe Coach. Vamos analisar suas finanças. O que você precisa?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -49,30 +68,12 @@ export default function ChatScreen() {
     },
     onError: (error: any) => {
       console.error("Chat error:", error);
-
       let errorText = "Desculpe, houve um erro ao processar sua mensagem.";
 
       if (error.message === "Network Error" || error.code === "ERR_NETWORK") {
-        errorText =
-          "❌ Erro de conexão!\n\n" +
-          "Verifique:\n" +
-          "• A API está rodando?\n" +
-          "• Está rodando em http://192.168.0.11:5010?\n" +
-          "• Seu celular e PC estão na mesma rede Wi-Fi?\n" +
-          "• O firewall permite conexões na porta 5010?";
-
-        Alert.alert(
-          "Erro de Conexão",
-          "Não foi possível conectar à API. Verifique se:\n\n" +
-            "1. A API está rodando no seu computador\n" +
-            "2. Está escutando em 192.168.0.11:5010\n" +
-            "3. Celular e PC na mesma rede Wi-Fi",
-          [{ text: "OK" }]
-        );
+        errorText = "❌ Erro de conexão com a API.";
       } else if (error.response) {
-        errorText = `Erro ${error.response.status}: ${
-          error.response.data?.message || "Erro no servidor"
-        }`;
+        errorText = `Erro ${error.response.status}: ${error.response.data?.message || "Erro no servidor"}`;
       }
 
       const errorMessage: Message = {
@@ -98,18 +99,46 @@ export default function ChatScreen() {
     setMessages((prev) => [userMessage, ...prev]);
     setInputText("");
 
-    // Scroll para o topo após enviar mensagem
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }, 100);
 
+
+    let systemContext = `
+    INSTRUÇÕES DO SISTEMA:
+    Você é o Vibe Coach, um assistente financeiro ASSERTIVO, OBJETIVO e REGULADOR.
+    Responda em PORTUGUÊS.
+    
+    PERFIL DO USUÁRIO:
+    - Nome: ${userProfile?.name || "Desconhecido"}
+    - Saldo Atual: R$ ${userProfile?.currentBalance || "0.00"}
+    - Renda Mensal: R$ ${userProfile?.monthlyIncome || "Não informado"}
+    - Despesas Fixas: R$ ${userProfile?.fixedExpenses || "Não informado"}
+    
+    ÚLTIMAS TRANSAÇÕES:
+    ${transactions
+      ?.slice(0, 5)
+      .map(
+        (t) =>
+          `- ${t.date.split("T")[0]}: ${t.title} (${t.type}) - R$ ${t.amount} (${t.category})`
+      )
+      .join("\n") || "Nenhuma transação recente."}
+    
+    SUA TAREFA:
+    Responda à mensagem do usuário abaixo levando em conta estritamente os dados acima.
+    Se o usuário perguntar se pode comprar algo, verifique o saldo e as despesas.
+    Seja direto. Não use frases genéricas como "Consulte um especialista". VOCÊ É O ESPECIALISTA.
+    
+    MENSAGEM DO USUÁRIO:
+    ${userMessage.text}
+    `;
+
     chatMutation.mutate({
       userId,
-      message: userMessage.text,
+      message: systemContext,
     });
   };
 
-  // Mostra loading apenas enquanto está carregando o auth
   if (authLoading) {
     return (
       <View className="flex-1 bg-zinc-900 items-center justify-center">
@@ -119,7 +148,6 @@ export default function ChatScreen() {
     );
   }
 
-  // Se não tem userId após carregar, mostra mensagem
   if (!userId) {
     return (
       <View className="flex-1 bg-zinc-900 items-center justify-center p-6">
@@ -130,15 +158,21 @@ export default function ChatScreen() {
         <Text className="text-zinc-400 text-center mt-2">
           Por favor, faça login primeiro
         </Text>
+        <TouchableOpacity
+          className="mt-6 bg-violet-600 px-8 py-3 rounded-xl"
+          onPress={() => router.replace("/login")}
+        >
+          <Text className="text-white font-bold text-lg">Fazer Login</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
       className="flex-1 bg-zinc-900"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={headerHeight}
     >
       <View className="flex-1">
         <ScrollView
@@ -158,17 +192,39 @@ export default function ChatScreen() {
               className={`mb-3 ${message.isUser ? "items-end" : "items-start"}`}
             >
               <View
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                   message.isUser ? "bg-violet-600" : "bg-zinc-800"
                 }`}
               >
-                <Text
-                  className={`text-base ${
-                    message.isUser ? "text-white" : "text-zinc-100"
-                  }`}
+                <Markdown
+                  style={{
+                    body: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 16,
+                    },
+                    heading1: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 24,
+                      fontWeight: "bold",
+                      marginBottom: 10,
+                    },
+                    heading2: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontSize: 20,
+                      fontWeight: "bold",
+                      marginBottom: 8,
+                    },
+                    strong: {
+                      color: message.isUser ? "#ffffff" : "#f4f4f5",
+                      fontWeight: "bold",
+                    },
+                    paragraph: {
+                      marginBottom: 10,
+                    },
+                  }}
                 >
                   {message.text}
-                </Text>
+                </Markdown>
               </View>
               <Text className="text-zinc-500 text-xs mt-1 px-2">
                 {message.timestamp.toLocaleTimeString("pt-BR", {
@@ -192,7 +248,6 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* Input Area - Fixo na parte inferior */}
         <View className="border-t border-zinc-800 bg-zinc-900 px-4 py-3">
           <View className="flex-row items-center bg-zinc-800 rounded-full px-4 py-2">
             <TextInput
