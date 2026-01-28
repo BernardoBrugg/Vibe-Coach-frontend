@@ -3,27 +3,20 @@ import { User, Transaction, Goal, ChatMessage, AuthResponse, GoogleAuthResponse 
 import { getToken } from "./auth";
 import Constants from "expo-constants";
 
-// Helper to determine the correct URL automatically
-// Helper to determine the correct URL automatically
 const getBaseUrl = () => {
-  // 1. If explicit env var is set, verify if it's usable.
-  // We prioritize the dynamic config unless the user REALLY wants to force it.
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
     console.log("⚠️ Using API URL from .env:", process.env.EXPO_PUBLIC_API_BASE_URL);
     return process.env.EXPO_PUBLIC_API_BASE_URL;
   }
   
-  // 2. Dynamic detection via Expo Constants
   const debuggerHost = Constants.expoConfig?.hostUri;
   const localhost = debuggerHost?.split(":")[0];
   
   if (!localhost) {
-    // Fallback for simulators if not found
     console.log("⚠️ Could not detect localhost IP, falling back to Android Emulator default: http://10.0.2.2:5010");
     return "http://10.0.2.2:5010"; 
   }
   
-  // Use the IP address of the machine running the Expo server
   const dynamicUrl = `http://${localhost}:5010`;
   console.log("✅ Detected Dynamic API URL:", dynamicUrl);
   return dynamicUrl;
@@ -48,9 +41,7 @@ api.interceptors.request.use(
     const token = await getToken();
     if (token) {
       console.log("🔑 Attaching Token:", token.substring(0, 10) + "...");
-      config.headers.Authorization = `Bearer ${token}`; // Axios 1.x supports direct assignment, but let's be explicit if needed
-      // Note: In newer Axios versions, headers is an AxiosHeaders object.
-      // config.headers.set('Authorization', `Bearer ${token}`); 
+      config.headers.Authorization = `Bearer ${token}`;
     } else {
       console.log("⚠️ No token found in SecureStore");
     }
@@ -125,8 +116,6 @@ export const createTransaction = async (data: {
   date?: string;
 }): Promise<Transaction> => {
   const { userId, ...transactionData } = data;
-  // Backend enforces UUID in body, but user ID is not UUID.
-  // Sending dummy UUID to satisfy validator; backend should use Token ID.
   const payload = { ...transactionData, userId: "00000000-0000-0000-0000-000000000000" };
   const response = await api.post("/transactions", payload);
   return response.data;
@@ -171,14 +160,11 @@ export const sendChatMessage = async (
   data: ChatMessage
 ): Promise<any> => {
   const { userId, ...messageData } = data;
-  // Backend enforces UUID in body, but user ID is not UUID.
-  // Sending dummy UUID to satisfy validator; backend should use Token ID.
   const payload = { ...messageData, userId: "00000000-0000-0000-0000-000000000000" };
   const response = await api.post("/chat", payload);
   return response.data;
 };
 
-// Auth
 export const googleLogin = async (token: string): Promise<GoogleAuthResponse> => {
   const response = await api.post("/auth/google", { token });
   return response.data;
