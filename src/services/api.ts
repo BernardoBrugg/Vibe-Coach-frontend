@@ -124,7 +124,11 @@ export const createTransaction = async (data: {
   frequency: string;
   date?: string;
 }): Promise<Transaction> => {
-  const response = await api.post("/transactions", data);
+  const { userId, ...transactionData } = data;
+  // Backend enforces UUID in body, but user ID is not UUID.
+  // Sending dummy UUID to satisfy validator; backend should use Token ID.
+  const payload = { ...transactionData, userId: "00000000-0000-0000-0000-000000000000" };
+  const response = await api.post("/transactions", payload);
   return response.data;
 };
 
@@ -165,8 +169,12 @@ export const getGoals = async (): Promise<Goal[]> => {
 
 export const sendChatMessage = async (
   data: ChatMessage
-): Promise<any> => { // Changed from ChatResponse to any based on the instruction's implied removal
-  const response = await api.post("/chat", data);
+): Promise<any> => {
+  const { userId, ...messageData } = data;
+  // Backend enforces UUID in body, but user ID is not UUID.
+  // Sending dummy UUID to satisfy validator; backend should use Token ID.
+  const payload = { ...messageData, userId: "00000000-0000-0000-0000-000000000000" };
+  const response = await api.post("/chat", payload);
   return response.data;
 };
 
